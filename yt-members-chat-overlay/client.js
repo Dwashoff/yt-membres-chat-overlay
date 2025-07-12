@@ -2,10 +2,14 @@ const urlParams = new URLSearchParams(window.location.search);
 const liveId = urlParams.get("id");  // Récupère le paramètre 'id' dans l'URL
 const chatContainer = document.getElementById("chat");
 
+// On attend que la variable YOUTUBE_API_KEY soit définie ailleurs (ex: via un script injecté)
+const apiKey = window.YOUTUBE_API_KEY;
+
 if (!liveId) {
   chatContainer.innerText = "Erreur : aucun ID de live fourni.";
+} else if (!apiKey) {
+  chatContainer.innerText = "Erreur : clé API YouTube non définie.";
 } else {
-  const apiKey = "YOUR_YOUTUBE_API_KEY"; // Remplace par ta clé API YouTube
   let nextPageToken = "";
 
   async function fetchChat() {
