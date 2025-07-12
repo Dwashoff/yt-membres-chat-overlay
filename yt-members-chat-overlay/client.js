@@ -1,38 +1,58 @@
 const urlParams = new URLSearchParams(window.location.search);
-const liveId = urlParams.get("liveId");
+const liveId = urlParams.get("id");  // Récupère le paramètre 'id' dans l'URL
 const chatContainer = document.getElementById("chat");
 
 if (!liveId) {
   chatContainer.innerText = "Erreur : aucun ID de live fourni.";
-}
+} else {
+  const apiKey = "YOUR_YOUTUBE_API_KEY"; // Remplace par ta clé API YouTube
+  let nextPageToken = "";
 
-const apiKey = "YOUR_YOUTUBE_API_KEY"; // Remplacer par votre clé API YouTube
-let nextPageToken = "";
+  async function fetchChat() {
+    const url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${window.chatId}&part=snippet,authorDetails&key=${apiKey}&pageToken=${nextPageToken}`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
 
-async function fetchChat() {
-  const url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${window.chatId}&part=snippet,authorDetails&key=${apiKey}&pageToken=${nextPageToken}`;
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    nextPageToken = data.nextPageToken;
-    for (const msg of data.items) {
-      if (msg.authorDetails.isChatSponsor) {
-        const p = document.createElement("p");
-        p.innerHTML = `<strong>${msg.authorDetails.displayName} :</strong> ${msg.snippet.displayMessage}`;
-        chatContainer.appendChild(p);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+      if (!data.items) {
+        chatContainer.innerText = "Aucun message ou problème avec l'API.";
+        return;
       }
+
+      nextPageToken = data.nextPageToken || "";
+
+      for (const msg of data.items) {
+        if (msg.authorDetails.isChatSponsor) {
+          const p = document.createElement("p");
+          p.innerHTML = `<strong>${msg.authorDetails.displayName} :</strong> ${msg.snippet.displayMessage}`;
+          chatContainer.appendChild(p);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }
+    } catch (err) {
+      console.error("Erreur API chat", err);
+      chatContainer.innerText = "Erreur lors de la récupération des messages.";
     }
-  } catch (err) {
-    console.error("Erreur API chat", err);
   }
-}
 
-async function getLiveChatId() {
-  const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${liveId}&key=${apiKey}`);
-  const data = await res.json();
-  window.chatId = data.items[0].liveStreamingDetails.activeLiveChatId;
-  setInterval(fetchChat, 3000);
-}
+  async function getLiveChatId() {
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${liveId}&key=${apiKey}`);
+      const data = await res.json();
 
-getLiveChatId();
+      if (!data.items || !data.items[0]) {
+        chatContainer.innerText = "Impossible de récupérer les détails du live.";
+        return;
+      }
+
+      window.chatId = data.items[0].liveStreamingDetails.activeLiveChatId;
+      fetchChat();
+      setInterval(fetchChat, 3000);
+    } catch (err) {
+      console.error("Erreur API liveChatId", err);
+      chatContainer.innerText = "Erreur lors de la récupération de l'ID du chat.";
+    }
+  }
+
+  getLiveChatId();
+}
